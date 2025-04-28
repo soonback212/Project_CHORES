@@ -100,7 +100,7 @@ bool is_cliff_detected();
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void parse_motor_command_lr(const char* str) {
+void parse_motor_command_LR(const char* str) {
     int left = 0, right = 0;
 
     // "L"로 시작하는 숫자 찾기
@@ -163,6 +163,8 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);  // 추가
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);  // 추가
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -206,6 +208,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  chck_and_stop_on_cliff();
+	  send_infrared_feedback();
       send_encoder_feedback_LR();
       HAL_Delay(100);
     /* USER CODE BEGIN 3 */
@@ -724,6 +728,16 @@ void send_encoder_feedback_LR() {
     HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 }
 
+void send_infrared_feedback() {
+    uint8_t s1 = HAL_GPIO_ReadPin(GPIOC, front_infrared1_Pin);
+    uint8_t s2 = HAL_GPIO_ReadPin(GPIOC, front_infrared2_Pin);
+
+    char msg[64];
+    sprintf(msg, "{\"infrared1\":%d,\"infrared2\":%d}\n", s1, s2);
+    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+}
+
+
 bool is_cliff_detected() {
     uint8_t s1 = HAL_GPIO_ReadPin(GPIOC, front_infrared1_Pin);
     uint8_t s2 = HAL_GPIO_ReadPin(GPIOC, front_infrared2_Pin);
@@ -733,6 +747,18 @@ bool is_cliff_detected() {
     HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 
     return (s1 == 1 || s2 == 1);  // 둘 중 하나라도 1이면 cliff
+}
+
+void check_and_stop_on_cliff() {
+    uint8_t s1 = HAL_GPIO_ReadPin(GPIOC, front_infrared1_Pin);
+    uint8_t s2 = HAL_GPIO_ReadPin(GPIOC, front_infrared2_Pin);
+
+    if (s1 == 1 || s2 == 1) {  // CLIFF 감지
+        __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, 0); // PWM 0
+        __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 0);
+        HAL_GPIO_WritePin(GPIOD, LD6_Pin, GPIO_PIN_SET); // CLIFF LED 점등
+        HAL_UART_Transmit(&huart2, (uint8_t*)"Cliff detected!\n", 17, HAL_MAX_DELAY);
+    }
 }
 
 /* USER CODE END 4 */
