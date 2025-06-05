@@ -1,0 +1,36 @@
+# STM32CubeIDE build artifacts
+*.bin
+*.elf
+*.hex
+*.map
+*.o
+*.lst
+*.srec
+*.out
+*.dep
+*.d
+*.log
+*.su
+
+# STM32CubeIDE project metadata
+.metadata/
+*.launch
+
+# Build folders
+/Debug/
+/Release/
+/build/
+/Build/
+
+# Backup and autosave files
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+
+# ROS2 build artifacts
+build/
+install/
+log/
+.vscode/settings.json
